@@ -1,0 +1,103 @@
+#include <WiFi.h>
+#include <SocketIoClient.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// Pines para sensores
+#define ONE_WIRE_BUS 4   // DS18B20
+#define TRIG_PIN     5   // HC-SR04 Trig
+#define ECHO_PIN     18  // HC-SR04 Echo
+
+// WiFi y servidor
+const char* ssid     = "TecNM-ITT";   // Cambiar
+const char* password = "";        // Cambiar
+const char* server   = "172.16.65.176";  // Cambiar
+const uint16_t port  = 3000;
+
+SocketIoClient socketIO;
+
+// Sensor de temperatura
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensores(&oneWire);
+
+// Variables
+uint64_t now = 0;
+uint64_t timestamp = 0;
+float temperaturaC;
+float distanciaCM;
+
+void setup() {
+  Serial.begin(115200);
+
+  // Inicializar sensores
+  sensores.begin();
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  // Conexión WiFi
+  conectar_WiFiSTA();
+
+  // Conexión Socket
+  socketIO.begin(server, port);
+  socketIO.on("desde_servidor_comando", procesar_mensaje_recibido);
+}
+
+void loop() {
+  now = millis();
+
+  if (now - timestamp > 1000) {
+    timestamp = now;
+
+    // Leer temperatura
+    sensores.requestTemperatures();
+    temperaturaC = sensores.getTempCByIndex(0);
+
+    // Leer distancia
+    distanciaCM = medirDistancia();
+
+    // Crear cadena separada por coma
+    String mensaje = "{\"temperatura\":" + String(temperaturaC, 2) + ",\"distancia\":" + String(distanciaCM, 2) + "}";
+
+
+    // Enviar al servidor
+    socketIO.emit("desde_esp32", mensaje.c_str());
+
+    Serial.println("ESP32 → " + mensaje);
+  }
+
+  socketIO.loop();
+}
+
+float medirDistancia() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duracion = pulseIn(ECHO_PIN, HIGH, 30000); // 30ms timeout
+  if (duracion == 0) return -1;
+
+  float distancia_cm = duracion * 0.034 / 2.0;
+  return distancia_cm;
+}
+
+void conectar_WiFiSTA() {
+  delay(10);
+  Serial.println("\nConectando a WiFi...");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(100);
+    Serial.print(".");
+  }
+
+  Serial.println("\nConexión exitosa");
+  Serial.print("Dirección IP asignada: ");
+  Serial.println(WiFi.localIP());
+}
+
+void procesar_mensaje_recibido(const char* payload, size_t length) {
+  Serial.printf("Mensaje recibido del servidor: %s\n", payload);
+}
