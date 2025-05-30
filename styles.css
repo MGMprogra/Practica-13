@@ -1,0 +1,43 @@
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to right, #e0f7fa, #f0f4c3);
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+h2 {
+    text-align: center;
+    color: #00695c;
+    margin-bottom: 30px;
+}
+
+#datos {
+    background-color: #ffffffcc;
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 400px;
+    margin: 0 auto 30px auto;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+#datos p {
+    font-size: 1.4em;
+    margin: 10px 0;
+}
+
+#datos strong {
+    color: #00796b;
+}
+
+@media (max-width: 600px) {
+    #datos, #div_grafica, #div_comando {
+        padding: 15px;
+        width: 90%;
+    }
+
+    #datos p {
+        font-size: 1.1em;
+    }
+}
